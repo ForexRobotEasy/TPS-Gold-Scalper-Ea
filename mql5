@@ -1,0 +1,101 @@
+mql5
+// +------------------------------------------------------------------+
+// |                                        TPS Gold Scalper EA.mq5 |
+// |                                 Copyright 2022, Forex Robot Easy Team |
+// |                                           https://www.forexroboteasy.com |
+// +------------------------------------------------------------------+
+
+// Define the input parameters
+input double LotSize = 0.01; // Initial lot size
+input double StopLoss = 100.0; // Stop loss in points
+input double TakeProfit = 200.0; // Take profit in points
+
+// Define global variables
+int ticket = 0; // Ticket number of the current trade
+
+// +------------------------------------------------------------------+
+// |                      Expert Advisor Initialization Function                    |
+// +------------------------------------------------------------------+
+int OnInit()
+{
+   // Print a message to the Experts tab
+   Print('TPS Gold Scalper EA initialized');
+
+   return(INIT_SUCCEEDED);
+}
+
+// +------------------------------------------------------------------+
+// |                   Expert Advisor Deinitialization Function                     |
+// +------------------------------------------------------------------+
+void OnDeinit(const int reason)
+{
+   // Print a message to the Experts tab
+   Print('TPS Gold Scalper EA deinitialized');
+}
+
+// +------------------------------------------------------------------+
+// |                   Expert Advisor Start Function                                    |
+// +------------------------------------------------------------------+
+void OnTick()
+{
+   // Check if a trade is already open
+   if(ticket == 0)
+   {
+      // Retrieve the current gold price
+      double currentPrice = MarketInfo('XAUUSD', MODE_BID);
+
+      // Calculate the entry and exit points
+      double entryPrice = currentPrice - StopLoss * Point();
+      double exitPrice = currentPrice + TakeProfit * Point();
+
+      // Open a new buy trade
+      ticket = OrderSend('XAUUSD', OP_BUY, LotSize, entryPrice, 0, exitPrice, 0, 'TPS Gold Scalper EA', 0, 0, Green);
+
+      // Check if the trade was executed successfully
+      if(ticket > 0)
+      {
+         // Print a message to the Experts tab
+         Print('Buy trade opened successfully, Ticket: ', ticket);
+      }
+      else
+      {
+         // Print an error message to the Experts tab
+         Print('Failed to open buy trade, Error: ', GetLastError());
+      }
+   }
+   else
+   {
+      // Check the status of the current trade
+      if(OrderSelect(ticket, SELECT_BY_TICKET))
+      {
+         // Check if the trade is still open
+         if(OrderType() == OP_BUY && OrderCloseTime() == 0)
+         {
+            // Retrieve the current gold price
+            double currentPrice = MarketInfo('XAUUSD', MODE_ASK);
+
+            // Check if the current price reached the take profit level
+            if(currentPrice >= OrderTakeProfit())
+            {
+               // Close the buy trade
+               bool result = OrderClose(ticket, OrderLots(), currentPrice, 0, Red);
+
+               // Check if the trade was closed successfully
+               if(result)
+               {
+                  // Print a message to the Experts tab
+                  Print('Buy trade closed successfully, Ticket: ', ticket);
+
+                  // Reset the ticket number
+                  ticket = 0;
+               }
+               else
+               {
+                  // Print an error message to the Experts tab
+                  Print('Failed to close buy trade, Error: ', GetLastError());
+               }
+            }
+         }
+      }
+   }
+}
